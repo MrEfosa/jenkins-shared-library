@@ -4,5 +4,9 @@ import com.example.Docker
 
 def call(String imageName) {
     def docker = new Docker(this)
-    docker.buildDockerImage(imageName)  
+    docker.buildDockerImage(imageName)
+    docker.loginToDockerHub()
+    docker.pushDockerImage(imageName)
 }
+
+
