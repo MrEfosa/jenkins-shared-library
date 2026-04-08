@@ -22,7 +22,7 @@ def call(Map config = [:]) {
         sh 'git config --global user.email "jenkins@example.com"'
         sh 'git config --global user.name "jenkins"'
 
-        sh "git remote set-url origin https://${USER}:${PASS}@${repoUrl}"
+        sh "git remote set-url origin https://${USER}:${PASS}@github.com/MrEfosa/java-maven-app.git"
 
         sh 'git add pom.xml'
         sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
