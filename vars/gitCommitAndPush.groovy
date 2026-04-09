@@ -3,7 +3,7 @@
 def call(Map config = [:]) {
 
     def credentialsId = config.credentialsId ?: 'github-credentials'
-    def branch = config.branch ?: 'jenkins-jobs'
+    def branch = config.branch ?: env.BRANCH_NAME
     def repoUrl = config.repoUrl
     def commitMessage = config.commitMessage ?: 'ci: version bump [skip ci]'
 
@@ -26,6 +26,6 @@ def call(Map config = [:]) {
 
         sh 'git add pom.xml'
         sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
-        sh "git push origin HEAD:${branch}"
+        sh "git push origin ${branch}"
     }
 }
