@@ -26,6 +26,6 @@ def call(Map config = [:]) {
 
         sh 'git add pom.xml'
         sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
-        sh "git push origin ${branch}"
+        sh "git push origin HEAD:${branch}"
     }
 }
