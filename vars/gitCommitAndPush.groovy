@@ -19,15 +19,14 @@ def call(Map config = [:]) {
         )
     ]) {
 
-        sh """
-        git config --global user.email "jenkins@example.com"
-        git config --global user.name "jenkins"
+        sh 'git config --global user.email "jenkins@example.com"'
+        sh 'git config --global user.name "jenkins"'
 
-        git remote set-url origin https://${GIT_USERNAME}@github.com/MrEfosa/java-maven-app.git
+        sh "git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/MrEfosa/java-maven-app.git"
 
-        git add pom.xml
-        git commit -m "${commitMessage}" || echo "No changes"
-        git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/MrEfosa/java-maven-app.git HEAD:${branch}
-        """
-    }
+        sh 'git add pom.xml'
+        sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
+        sh "git push origin HEAD:${branch}"
+}
+    
 }
