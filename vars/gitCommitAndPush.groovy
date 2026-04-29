@@ -14,18 +14,20 @@ def call(Map config = [:]) {
     withCredentials([
         usernamePassword(
             credentialsId: credentialsId,
-            usernameVariable: 'USER',
-            passwordVariable: 'PASS'
+            usernameVariable: 'GIT_USERNAME',
+            passwordVariable: 'GIT_PASSWORD'
         )
     ]) {
 
-        sh 'git config --global user.email "jenkins@example.com"'
-        sh 'git config --global user.name "jenkins"'
+        sh """
+        git config --global user.email "jenkins@example.com"
+        git config --global user.name "jenkins"
 
-        sh "git remote set-url origin https://${USER}:${PASS}@github.com/MrEfosa/java-maven-app.git"
+        git remote set-url origin https://${GIT_USERNAME}@github.com/MrEfosa/java-maven-app.git
 
-        sh 'git add pom.xml'
-        sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
-        sh "git push origin HEAD:${branch}"
+        git add pom.xml
+        git commit -m "${commitMessage}" || echo "No changes"
+        git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/MrEfosa/java-maven-app.git HEAD:${branch}
+        """
     }
 }
