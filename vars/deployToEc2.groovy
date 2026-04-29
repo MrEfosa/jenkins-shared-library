@@ -10,11 +10,16 @@ def call(Map config = [:]) {
 
     echo "Deploying the application to EC2 server..."
 
-    def shellCmd = "bash ./${scriptFile} ${imageName}"
+    def shellCmd = "bash ${remotePath}/${scriptFile} ${imageName}"
 
     sshagent([sshCredential]) {
-        sh "scp ${scriptFile} ${ec2Instance}:${remotePath}"
-        sh "scp ${composeFile} ${ec2Instance}:${remotePath}"
-        sh "ssh -o StrictHostKeyChecking=no ${ec2Instance} '${shellCmd}'"
+        sh """
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${ec2Instance.split('@')[1]} >> ~/.ssh/known_hosts
+
+        scp ${scriptFile} ${ec2Instance}:${remotePath}
+        scp ${composeFile} ${ec2Instance}:${remotePath}
+        ssh ${ec2Instance} '${shellCmd}'
+        """
     }
 }
