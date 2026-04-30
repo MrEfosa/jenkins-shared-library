@@ -11,27 +11,21 @@ def call(Map config = [:]) {
         error("repoUrl is required")
     }
 
-    // Ensure repo exists
-    if (!fileExists('.git')) {
-        git url: repoUrl, branch: branch
-    }
-
     withCredentials([
         usernamePassword(
             credentialsId: credentialsId,
-            usernameVariable: 'GIT_USERNAME',
-            passwordVariable: 'GIT_PASSWORD'
+            usernameVariable: 'USER',
+            passwordVariable: 'PASS'
         )
     ]) {
 
-        sh '''
-            git config --global user.email "jenkins@example.com"
-            git config --global user.name "jenkins"
+        sh 'git config --global user.email "jenkins@example.com"'
+        sh 'git config --global user.name "jenkins"'
 
-            git add pom.xml
-            git diff --quiet || git commit -m "ci: version bump [skip ci]"
+        sh "git remote set-url origin https://${USER}:${PASS}@github.com/MrEfosa/java-maven-app.git"
 
-            git push https://$GIT_USERNAME:$GIT_PASSWORD@github.com/MrEfosa/java-maven-app.git HEAD:master
-        '''
+        sh 'git add pom.xml'
+        sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
+        sh "git push origin HEAD:${branch}"
     }
 }
