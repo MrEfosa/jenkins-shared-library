@@ -36,7 +36,7 @@ def call(Map config = [:]) {
         sh """
             git diff --quiet || git commit -m "${commitMessage}"
         """
-
+        sh 'git remote -v'
         sh "git push origin HEAD:${branch}"
     }
 }
