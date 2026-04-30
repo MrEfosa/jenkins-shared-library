@@ -34,3 +34,4 @@ def call(Map config = [:]) {
             git push https://$GIT_USERNAME:$GIT_PASSWORD@github.com/MrEfosa/java-maven-app.git HEAD:master
         '''
     }
+}
