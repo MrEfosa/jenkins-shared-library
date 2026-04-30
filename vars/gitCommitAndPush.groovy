@@ -24,22 +24,13 @@ def call(Map config = [:]) {
         )
     ]) {
 
-        sh 'git config --global user.email "jenkins@example.com"'
-        sh 'git config --global user.name "jenkins"'
-
         sh '''
-            git remote set-url origin https://$GIT_USERNAME:$GIT_PASSWORD@github.com/MrEfosa/java-maven-app.git
-        '''
+            git config --global user.email "jenkins@example.com"
+            git config --global user.name "jenkins"
 
-        sh 'git add pom.xml'
+            git add pom.xml
+            git diff --quiet || git commit -m "ci: version bump [skip ci]"
 
-        sh """
-            git diff --quiet || git commit -m "${commitMessage}"
-        """
-        sh '''
-        git config --global --unset credential.helper || true
-        git config --system --unset credential.helper || true
+            git push https://$GIT_USERNAME:$GIT_PASSWORD@github.com/MrEfosa/java-maven-app.git HEAD:master
         '''
-        sh "git push origin HEAD:${branch}"
     }
-}
