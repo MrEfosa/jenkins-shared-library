@@ -67,24 +67,24 @@ class Docker implements Serializable {
         // Strip out any existing protocol prefix from the user-provided repoUrl
         def cleanUrl = repoUrl.replace("https://", "").replace("http://", "")
 
-        withCredentials([
-            usernamePassword(
+        script.withCredentials([
+            script.usernamePassword(
                 credentialsId: credentialsId,
                 usernameVariable: 'USER',
                 passwordVariable: 'PASS'
             )
         ]) {
             // Configure local commit identity
-            sh 'git config --global user.email "jenkins@example.com"'
-            sh 'git config --global user.name "jenkins"'
+            script.sh 'git config --global user.email "jenkins@example.com"'
+            script.sh 'git config --global user.name "jenkins"'
 
             // Use triple-single quotes to securely pass env variables to Linux shell without Groovy tampering
-            sh "git remote set-url origin https://\$USER:\$PASS@${cleanUrl}"
+            script.sh "git remote set-url origin https://\$USER:\$PASS@${cleanUrl}"
 
             // Handle the staging, fallback logic for clean empty-state commits, and pushing
-            sh 'git add pom.xml'
-            sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
-            sh "git push origin HEAD:${branch}"
+            script.sh 'git add pom.xml'
+            script.sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
+            script.sh "git push origin HEAD:${branch}"
         }
     }
 }
