@@ -25,6 +25,7 @@ vars/
  ├── buildImage.groovy
  ├── dockerLogin.groovy
  ├── dockerPush.groovy
+ ├── deployToEc2.groovy
  ├── gitCommitAndPush.groovy
  └── incrementVersion.groovy
 ```
@@ -54,6 +55,12 @@ Authenticates with Docker Hub using Jenkins credentials.
 ### dockerPush()
 
 Pushes the built Docker image to Docker Hub.
+
+---
+
+### deployToEc2()
+
+Deploys the app to an Ec2 instance
 
 ---
 
