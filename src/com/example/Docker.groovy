@@ -8,6 +8,21 @@ class Docker implements Serializable {
     Docker(script) {
         this.script = script
     }
+    def incrementVersion() {
+        script.echo 'incrementing app version...'
+
+        script.sh '''
+            mvn build-helper:parse-version versions:set \
+            -DnewVersion=\\${parsedVersion.majorVersion}.\\${parsedVersion.minorVersion}.\\${parsedVersion.nextIncrementalVersion} \
+            versions:commit
+        '''
+        def version = script.sh(
+            script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout",
+            returnStdout: true
+        ).trim()
+        script.env.IMAGE_NAME = "${version}-${script.env.BUILD_NUMBER}"
+        return version
+    }
 
     def buildDockerImage(String imageName) {
         script.echo "building the docker image..."
@@ -22,5 +37,54 @@ class Docker implements Serializable {
 
     def dockerPush(String imageName) {
         script.sh "docker push ${imageName}"
+    }
+
+    def deployToEc2(Map config = [:]) {
+        script.echo "deploying the docker image to EC2..."
+        
+        def imageName   = config.imageName
+        def ec2User     = config.ec2User ?: "ec2-user"
+        def ec2Ip       = config.ec2Ip
+        def ec2Instance = "${ec2User}@${ec2Ip}"
+        
+        script.sshagent(['ec2-ssh-credentials']) {
+            script.sh """
+                ssh -o StrictHostKeyChecking=no ${ec2Instance} 'docker pull ${imageName} && docker run -d ${imageName}'
+            """
+        }
+    }
+
+    def gitCommitAndPush(Map config = [:]){
+        def credentialsId = config.credentialsId ?: 'github-credentials'
+        def branch        = config.branch ?: env.BRANCH_NAME
+        def repoUrl       = config.repoUrl
+        def commitMessage = config.commitMessage ?: 'ci: version bump [skip ci]'
+
+        if (!repoUrl) {
+            error("repoUrl is required")
+        }
+
+        // Strip out any existing protocol prefix from the user-provided repoUrl
+        def cleanUrl = repoUrl.replace("https://", "").replace("http://", "")
+
+        withCredentials([
+            usernamePassword(
+                credentialsId: credentialsId,
+                usernameVariable: 'USER',
+                passwordVariable: 'PASS'
+            )
+        ]) {
+            // Configure local commit identity
+            sh 'git config --global user.email "jenkins@example.com"'
+            sh 'git config --global user.name "jenkins"'
+
+            // Use triple-single quotes to securely pass env variables to Linux shell without Groovy tampering
+            sh "git remote set-url origin https://\$USER:\$PASS@${cleanUrl}"
+
+            // Handle the staging, fallback logic for clean empty-state commits, and pushing
+            sh 'git add pom.xml'
+            sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
+            sh "git push origin HEAD:${branch}"
+        }
     }
 }
