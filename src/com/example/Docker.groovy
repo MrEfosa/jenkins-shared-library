@@ -23,6 +23,10 @@ class Docker implements Serializable {
         script.env.IMAGE_NAME = "${version}-${script.env.BUILD_NUMBER}"
         return version
     }
+    def mavenBuild() {
+        script.echo "Compiling and packaging the Java application..."
+        script.sh "mvn clean package"
+    }
 
     def buildDockerImage(String imageName) {
         script.echo "building the docker image..."
