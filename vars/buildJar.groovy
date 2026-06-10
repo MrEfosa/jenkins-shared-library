@@ -1,4 +1,8 @@
 #!/usr/bin/env groovy
-def call(){
-    sh 'mvn clean package'
+import com.example.Docker
+
+def call() {
+    def docker = new Docker(this)
+    
+    docker.mavenBuild()
 }
