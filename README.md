@@ -1,85 +1,75 @@
-# Jenkins Shared Library for CI/CD Automation
+# Jenkins Shared Library for Java/Maven CI/CD Automation
 
 ## Overview
+This repository contains an enterprise-ready, object-oriented **Jenkins Shared Library** designed to standardize, modularize, and accelerate CI/CD workflows for Java Maven applications. 
 
-This repository contains a reusable **Jenkins Shared Library** designed to simplify and standardize CI/CD pipelines for a Java Maven application.
-
-It modularizes pipeline logic into reusable functions, enabling cleaner and more maintainable Jenkinsfiles.
-
----
-
-## Features
-
-* Modular CI/CD pipeline steps
-* Reusable across multiple projects
-* Supports multibranch pipelines
-* Automates build, containerization, and versioning
+By abstracting complex pipeline mechanics away from individual application repositories, this library enables developers to maintain minimal, declarative `Jenkinsfiles` while platform engineers retain centralized control over the build, testing, and deployment execution logic.
 
 ---
 
-## Project Structure
+## Project Architecture & Structure
+This library separates its pipeline steps into two clear areas: 
+* **Global Shortcuts (`vars/`)** – Clean, one-word pipeline commands that developers can easily call in their Jenkinsfile.
+* **The Core Engine (`src/`)** – The background helper file where the actual complex commands (like Maven and Docker shell operations) are securely stored and managed.
 
-```text id="xk9h2p"
-vars/
- ├── buildJar.groovy
- ├── buildImage.groovy
- ├── dockerLogin.groovy
- ├── dockerPush.groovy
- ├── deployToEc2.groovy
- ├── gitCommitAndPush.groovy
- └── incrementVersion.groovy
-```
+```text
+.
+├── src/
+│   └── com/
+│       └── example/
+│           └── Docker.groovy         # The core engine containing all lifecycle methods
+└── vars/
+    ├── buildJar.groovy               # Compiles and packages Java source via Maven
+    ├── buildImage.groovy             # Constructs Docker image using dynamic tagging
+    ├── dockerLogin.groovy            # Authenticates securely against Docker Hub
+    ├── dockerPush.groovy             # Uploads tagged image layers to registry
+    ├── incrementVersion.groovy       # Automates semantic patch version bumps
+    ├── gitCommitAndPush.groovy       # Synchronizes modified pom.xml back to GitHub
+    └── deployToEc2.groovy            # Provisions remote runtime deployment over SSH
+---
+
+## Key Features
+
+* **Centralized Code Logic:** Keeps all messy shell scripts inside a single hidden file (`src/`), making individual pipeline steps clean and easy to read.
+* **Smart Version Bumping:** Uses automated Maven tools to automatically increase the app version number (e.g., `1.4.2` to `1.4.3`) without any human typing.
+* **Tight Security Controls:** Keeps passwords hidden from console logs and streams them safely through background memory directly into Docker Hub.
+* **Protected Server Access:** Uses secure, temporary digital keys to log onto AWS EC2 instances, deleting them immediately after deployment so nothing is left behind on disk.
+* **Infinite Loop Interception:** Automatically adds a `[skip ci]` tag to automated code updates so Jenkins knows not to trigger itself over and over again in a loop.
 
 ---
 
-## Available Functions
+## Available Pipeline Commands & Options
 
-### buildJar()
+### `incrementVersion()`
+Automatically bumps the last digit of your app's version number in the `pom.xml` file (e.g., `1.4.2` to `1.4.3`) and saves this new number so later steps can use it.
 
-Builds the Java application using Maven.
+### `buildJar()`
+Runs the standard Maven command to compile your Java source code into a runnable package.
 
----
+### `buildImage(Map config)`
+Converts your compiled Java code into a Docker container image.
+* `imageName` (Required): The name and version tag you want to give to your Docker image.
 
-### buildImage()
+### `dockerLogin(Map config)`
+Logs into your Docker Hub account securely.
+* `credentialsId` (Optional): The secret key name saved inside Jenkins. Defaults to `'docker-hub-repo'`.
 
-Builds a Docker image from the application artifact.
+### `gitCommitAndPush(Map config)`
+Saves the updated version number back to your GitHub repository automatically.
+* `repoUrl` (Required): Your project's full GitHub address.
+* `branch` (Optional): The branch you want to push to. Defaults to your active branch.
+* `credentialsId` (Optional): Your saved GitHub access token name inside Jenkins. Defaults to `'github-credentials'`.
+* `commitMessage` (Optional): The text message for the Git update. Defaults to `'ci: version bump [skip ci]'`.
 
----
-
-### dockerLogin()
-
-Authenticates with Docker Hub using Jenkins credentials.
-
----
-
-### dockerPush()
-
-Pushes the built Docker image to Docker Hub.
-
----
-
-### deployToEc2()
-
-Deploys the app to an Ec2 instance
-
----
-
-### incrementVersion()
-
-Automatically increments the application version (e.g., in `pom.xml`).
+### `deployToEc2(Map config)`
+Connects to your AWS cloud server and launches your updated Docker image.
+* `imageName` (Required): The full name of the Docker Hub image to download and run.
+* `ec2Ip` (Required): The network IP address of your AWS EC2 virtual machine.
+* `ec2User` (Optional): The Linux profile name used to log into AWS. Defaults to `'ec2-user'`.
 
 ---
 
-### gitCommitAndPush()
-
-Commits version updates and pushes them back to the repository.
-
-* Uses dynamic branch detection via `env.BRANCH_NAME`
-* Prevents CI loops using `[skip ci]` in commit messages
-
----
-
-## 🔗 Usage Example
+## Live Implementation Example
 
 ```groovy id="9c9b9g"
 @Library('your-shared-library') _
@@ -88,58 +78,66 @@ pipeline {
     agent any
 
     stages {
-        stage('Build') {
+        stage('Semantic Versioning') {
+            steps {
+                // Automates patch increment and outputs back to env.IMAGE_NAME
+                incrementVersion() 
+            }
+        }
+
+        stage('Compile binary') {
             steps {
                 buildJar()
             }
         }
 
-        stage('Build Image') {
+        stage('Containerize Asset') {
             steps {
-                buildImage()
+                buildImage(imageName: "sirdavidchris/java-app:${env.IMAGE_NAME}")
             }
         }
 
-        stage('Push Image') {
+        stage('Publish Artifacts') {
             steps {
-                dockerLogin()
-                dockerPush()
+                dockerLogin(credentialsId: 'docker-hub-repo')
+                dockerPush(imageName: "sirdavidchris/java-app:${env.IMAGE_NAME}")
+            }
+        }
+
+        stage('Synchronize Upstream Git') {
+            steps {
+                gitCommitAndPush(
+                    repoUrl: '[https://github.com/MrEfosa/java-maven-app.git](https://github.com/MrEfosa/java-maven-app.git)',
+                    branch: 'master',
+                    credentialsId: 'github-credentials'
+                )
+            }
+        }
+
+        stage('Execute Cloud Deployment') {
+            steps {
+                deployToEc2(
+                    imageName: "sirdavidchris/java-app:${env.IMAGE_NAME}",
+                    ec2Ip: '54.165.131.131',
+                    ec2User: 'ubuntu'
+                )
             }
         }
     }
 }
 ```
-
 ---
 
-## Requirements
+## Requirements and System Dependencies
 
-* Jenkins configured with Global Pipeline Library
-* GitHub credentials stored in Jenkins
-* Docker installed and accessible on Jenkins agent
-* Docker Hub account for image storage
-
----
-
-## Design Approach
-
-This shared library follows:
-
-* **Separation of concerns** → each function handles a single task
-* **Reusability** → can be used across multiple pipelines
-* **Scalability** → easy to extend with additional steps
-
----
-
-## Benefits
-
-* Cleaner Jenkinsfiles
-* Reduced duplication
-* Easier maintenance
-* Standardized CI/CD workflows
+* **Jenkins Setup:** Jenkins (Version 2.x or higher) must have the "Pipeline: Shared Groovy Libraries" plugin installed.
+* **Security Credentials:** You must save your login secrets inside Jenkins' secure credential vault:
+  * Username and Password keys for **Docker Hub** and **GitHub**.
+  * An SSH Private Key (your `.pem` file) for your **AWS EC2 server**.
+* **Installed Tools:** The server running your Jenkins builds must have **Git**, **Docker**, and **Java/Maven** pre-installed and ready to use.
 
 ---
 
 ## Author
 
-**Onyekaozuru Tochukwu David**
+* **Onyekaozuru Tochukwu David** - *DevOps & Cloud Systems Engineer*
