@@ -26,6 +26,7 @@ This library separates its pipeline steps into two clear areas:
     ├── incrementVersion.groovy       # Automates semantic patch version bumps
     ├── gitCommitAndPush.groovy       # Synchronizes modified pom.xml back to GitHub
     └── deployToEc2.groovy            # Provisions remote runtime deployment over SSH
+```
 ---
 
 ## Key Features
