@@ -68,7 +68,6 @@ class Docker implements Serializable {
             error("repoUrl is required")
         }
 
-        // Strip out any existing protocol prefix from the user-provided repoUrl
         def cleanUrl = repoUrl.replace("https://", "").replace("http://", "")
 
         script.withCredentials([
@@ -81,10 +80,8 @@ class Docker implements Serializable {
             // Configure local commit identity
             script.sh 'git config --global user.email "jenkins@example.com"'
             script.sh 'git config --global user.name "jenkins"'
-
-            // Use triple-single quotes to securely pass env variables to Linux shell without Groovy tampering
             script.sh "git remote set-url origin https://\$USER:\$PASS@${cleanUrl}"
-
+            
             // Handle the staging, fallback logic for clean empty-state commits, and pushing
             script.sh 'git add pom.xml'
             script.sh "git commit -m \"${commitMessage}\" || echo 'No changes to commit'"
